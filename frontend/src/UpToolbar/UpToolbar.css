@@ -1,0 +1,41 @@
+.toolbar-container {
+    display: flex;
+    justify-content: center; /* Center the toolbar horizontally */
+    margin-bottom: 10px;
+}
+
+.toolbar-up {
+    display: flex;
+    border: 1px solid #ccc; /* Add border style */
+    padding: 5px; /* Add padding for spacing */
+}
+
+.toolbar-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-right: 20px;
+    position: relative;
+}
+
+.toolbar-btn img {
+    width: 30px; /* Adjust the size as needed */
+}
+
+.toolbar-btn span {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.toolbar-btn:hover span {
+    opacity: 1;
+}
