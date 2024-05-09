@@ -6,9 +6,44 @@ import io
 from ultralytics import YOLO
 from ultralytics.utils.plotting import Annotator
 from flask_cors import CORS
+import os
+
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 app = Flask(__name__)
 CORS(app)
+
+DIAGNOSIS_DIR = "diagnoses"
+if not os.path.exists(DIAGNOSIS_DIR):
+    os.makedirs(DIAGNOSIS_DIR)
+
+
+@app.route('/save_diagnosis', methods=['POST'])
+def save_diagnosis():
+    data = request.get_json()
+    image_id = data.get('imageName')
+    diagnosis = data.get('diagnosis')
+
+    if not image_id or not diagnosis:
+        return jsonify({'error': 'Missing image_id or diagnosis'}), 400
+
+    # Сохраняем диагноз в файл
+    diagnosis_file_path = os.path.join(DIAGNOSIS_DIR, f"{image_id}_diagnosis.txt")
+    with open(diagnosis_file_path, 'w') as f:
+        f.write(diagnosis)
+
+    return jsonify({'success': True})
+
+
+@app.route('/get_diagnosis/<image_id>', methods=['GET'])
+def get_diagnosis(image_id):
+    diagnosis_file_path = os.path.join(DIAGNOSIS_DIR, f"{image_id}_diagnosis.txt")
+    if os.path.exists(diagnosis_file_path):
+        with open(diagnosis_file_path, 'r') as f:
+            diagnosis = f.read()
+        return jsonify({'diagnosis': diagnosis})
+    else:
+        return jsonify({'error': 'Diagnosis not found'}), 404
 
 
 @app.route('/process_image', methods=['POST'])

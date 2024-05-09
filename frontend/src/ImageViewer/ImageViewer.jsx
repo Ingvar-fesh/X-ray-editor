@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import './ImageViewer.css';
 import SideToolbar from '../SideToolbar/SideToolbar';
 import axios from 'axios';
+import DiagnosisModal from '../DiagnosisModal/DiagnosisModal';
 
 function ImageViewer({ image, onClose, onSave }) {
     const imageCanvasRef = useRef(null);
@@ -36,6 +37,9 @@ function ImageViewer({ image, onClose, onSave }) {
     const [dragImageStartY, setDragImageStartY] = useState(0);
 
     const [loading, setLoading] = useState(false);
+    const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
+    const [loadingDiagnosis, setLoadingDiagnosis] = useState(false);
+    const [diagnosis, setDiagnosis] = useState('');
     
 
     useEffect(() => {
@@ -343,7 +347,6 @@ function ImageViewer({ image, onClose, onSave }) {
         setIsDraggingImage(false);
     };
     
-    // Modify the image canvas style to apply translation for moving the image
     const imageCanvasStyle = {
         position: 'absolute',
         transform: `scale(${zoomLevel}) translate(${imagePositionX}px, ${imagePositionY}px)`
@@ -360,11 +363,11 @@ function ImageViewer({ image, onClose, onSave }) {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                     },
-                    responseType: 'blob', // Set responseType to blob to receive image data as Blob
+                    responseType: 'blob',
                 });
                 console.log('Response from server:', response);
     
-                if (response.status === 200) { // Check if response status is OK
+                if (response.status === 200) {
                     const blob = new Blob([response.data], { type: 'image/png' });
     
                     const img = new Image();
@@ -381,7 +384,7 @@ function ImageViewer({ image, onClose, onSave }) {
                         console.error('Error loading image:', error);
                     };
     
-                    img.src = URL.createObjectURL(blob); // Use URL.createObjectURL to create a URL for the blob
+                    img.src = URL.createObjectURL(blob);
                 } else {
                     console.error('Error processing image. Status:', response.status);
                 }
@@ -394,8 +397,52 @@ function ImageViewer({ image, onClose, onSave }) {
             console.error('No image available in props');
         }
     };
+
+    const loadDiagnosis = async (imageId) => {
+        try {
+            setLoadingDiagnosis(true);
+            const response = await axios.get(`http://127.0.0.1:5000/get_diagnosis/${imageId}`);
+            if (response.status === 200) {
+                setDiagnosis(response.data.diagnosis);
+            } else {
+                console.error('Error loading diagnosis:', response.status);
+            }
+        } catch (error) {
+            console.error('Error loading diagnosis:', error);
+        } finally {
+            setLoadingDiagnosis(false);
+        }
+    };
     
+    const handleOpenDiagnosisModal = () => {
+        if (image && image.name) {
+            loadDiagnosis(image.name);
+        }
+        setShowDiagnosisModal(true);
+    };
+
+    const handleCloseDiagnosisModal = () => {
+        setShowDiagnosisModal(false);
+    };
+
+    const handleSaveDiagnosis = async (diagnosis) => {
+        try {
+            const response = await axios.post('http://127.0.0.1:5000/save_diagnosis', {
+                imageName: image.name,
+                diagnosis: diagnosis
+            });
     
+            if (response.status === 200) {
+                console.log('Diagnosis saved successfully:', response.data);
+            } else {
+                console.error('Error saving diagnosis:', response.status);
+            }
+        } catch (error) {
+            console.error('Error saving diagnosis:', error);
+        } finally {
+            setShowDiagnosisModal(false);
+        }
+    };
     
 
     return (
@@ -418,6 +465,7 @@ function ImageViewer({ image, onClose, onSave }) {
                 <button onClick={handleZoomIn}>Zoom In</button>
                 <button onClick={handleZoomOut}>Zoom Out</button>
                 <button onClick={handleSave}>Save</button>
+                <button onClick={handleOpenDiagnosisModal}>Write Diagnosis</button>
                 <button onClick={handleSubmit}>AI Model</button>
                 <button onClick={onClose}>Close</button>
                 {selectedShapeIndex !== null && (
@@ -428,7 +476,7 @@ function ImageViewer({ image, onClose, onSave }) {
                     }}>X</button>
                 )}
             </div>
-
+    
             <SideToolbar
                 onBrightnessChange={setBrightness}
                 onContrastChange={setContrast}
@@ -440,14 +488,21 @@ function ImageViewer({ image, onClose, onSave }) {
                 penMode={penMode}
                 rubberMode={rubberMode}
             />
+            {showDiagnosisModal ? (
+                <DiagnosisModal 
+                initialDiagnosis={diagnosis} 
+                onSave={handleSaveDiagnosis} 
+                onCancel={handleCloseDiagnosisModal} />
+            ) : null}
             {loading && (
                 <div className="loading-overlay">
                     <div className="loading-spinner"></div>
                     <p>Please wait, AI model is processing...</p>
                 </div>
-            )} 
+            )}
         </div>
     );
+    
 }
 
 export default ImageViewer;
